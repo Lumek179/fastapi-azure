@@ -1,60 +1,113 @@
-To Start the Local Testing
-docker compose -f docker-compose.yml up -d
+# FastAPI - Azure SQL API Project (English Version)
 
-To Stop the Local Testing (Ctrl+C)
+This project implements a REST API using **FastAPI**, connected to an **Azure SQL** database. Its main goal is to streamline the upload, validation, storage, and querying of employee hiring data across departments and jobs.
+
+---
+
+## 🔍 Project Structure
+
+```
+fastapi-azure/
+├── app/
+│   ├── main.py               # Main file with all endpoints
+│   ├── db.py                 # DB connection setup
+│   ├── models.py             # ORM models with SQLAlchemy
+│   ├── schemas.py            # Pydantic schemas (optional/future use)
+│   ├── db_utils.py           # Utility functions for chunked reading
+│   └── main_deprecated.py    # Old version of main (optional)
+```
+
+---
+
+## 🚀 Key Features
+
+- Upload `.csv` files to populate `departments`, `jobs`, and `hired_employees` tables.
+- Deduplication using pandas merge vs database content.
+- Automatic handling of nulls, date conversion, and foreign keys.
+- Efficient memory usage with chunked loading (`chunksize=1000`).
+- Reporting endpoints to analyze hiring metrics.
+
+---
+
+## 🛠️ Run the App with Docker
+
+To **start the app** using Docker Compose:
+```bash
+docker compose -f docker-compose.yml up --build
+```
+
+To **stop the app**:
+```bash
 docker compose -f docker-compose.yml down
+```
 
-To Test the creation of records:
-http://localhost:8000/seed POST
+---
 
-To Get the Records of a db via API
-http://localhost:8000/items GET
+## 🔗 Main Endpoints
 
-http://localhost:8000/docs#/
+### 1. Upload CSV files (validated and deduplicated)
+Endpoint:
+```http
+POST /upload-csv-dfa-sql/{table_name}
+```
+Allowed `table_name` values:
+- `hired_employees`
+- `departments`
+- `jobs`
 
-Resumen rápido para Postman
+#### 🚗 CURL examples
+```bash
+curl -X POST http://localhost:8000/upload-csv-dfa-sql/hired_employees -F "file=@hired_employees.csv"
+curl -X POST http://localhost:8000/upload-csv-dfa-sql/departments -F "file=@departments.csv"
+curl -X POST http://localhost:8000/upload-csv-dfa-sql/jobs -F "file=@jobs.csv"
+```
 
-Subir departments.csv
-Opc1:
-POST form-data
-http://localhost:8000/upload-csv/departments
-Opc2:
-curl -X POST http://localhost:8000/upload-csv/departments \
-  -F "file=@departments.csv"
+#### 📏 Postman instructions
+- Method: `POST`
+- URL: `http://localhost:8000/upload-csv-dfa-sql/{table_name}`
+- Body: `form-data`
+  - Key: `file`
+  - Type: `File`
+  - Value: Select your `.csv` file from disk
 
+---
 
+### 2. Quarterly hiring by job and department (2021)
+- **Description**: Total employees hired for each job and department in 2021, divided by quarter. Sorted alphabetically by department and job.
+- **Endpoint**:
+```http
+GET http://0.0.0.0:8000/report/hirings-per-quarter
+```
 
-Subir jobs.csv
-Opc1:
-POST form-data
-http://localhost:8000/upload-csv/jobs
-Opc2:
-curl -X POST http://localhost:8000/upload-csv/jobs \
-  -F "file=@jobs.csv"
+### 3. Departments above average hiring in 2021
+- **Description**: Departments with more hires than the 2021 average. Ordered descending by total hires.
+- **Endpoint**:
+```http
+GET http://0.0.0.0:8000/report/above-average-hirings-2021
+```
 
+### 4. Departments above 2021 average (all time)
+- **Description**: Departments whose total hiring (all time) exceeds the average of all departments in 2021.
+- **Endpoint**:
+```http
+GET http://0.0.0.0:8000/report/above-average-hirings-all
+```
 
-Subir hired_employees.csv
-Opc1:
-POST form-data
-http://localhost:8000/upload-csv/hired_employees
-Opc2:
-curl -X POST http://localhost:8000/upload-csv/hired_employees \
-  -F "file=@hired_employees.csv"
+---
 
+## 📊 Utility Functions (`app/db_utils.py`)
 
+```python
+load_dataframe_chunks(model, columns, db_bind, chunksize=1000)
+```
+Loads a table in memory-safe chunks using SQLAlchemy and pandas. Returns a full combined DataFrame.
 
-Reporte contrataciones por trimestre
-Opc1:
-GET
-http://localhost:8000/report/hirings-per-quarter
-Opc2:
-curl http://localhost:8000/report/hirings-per-quarter
+---
 
+## 🛡️ Validation Rules
 
+- Skip duplicates using pandas `merge()`
+- Convert timezone-aware datetimes to naive for proper comparison
+- Fill nulls with defaults (e.g., "Unknown", `-1`)
+- Exclude dates before `1753-01-01` (SQL Server valid range)
 
-Reporte departamentos sobre media
-Opc1:
-GET
-http://localhost:8000/report/above-average-hirings
-Opc2:
-curl http://localhost:8000/report/above-average-hirings
