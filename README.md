@@ -1,4 +1,4 @@
-# FastAPI - Azure SQL API Project (English Version)
+# FastAPI - Azure SQL API Project
 
 This project implements a REST API using **FastAPI**, connected to an **Azure SQL** database. Its main goal is to streamline the upload, validation, storage, and querying of employee hiring data across departments and jobs.
 
