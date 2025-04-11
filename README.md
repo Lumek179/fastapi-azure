@@ -10,7 +10,7 @@ http://localhost:8000/seed POST
 To Get the Records of a db via API
 http://localhost:8000/items GET
 
-
+http://localhost:8000/docs#/
 
 Resumen rápido para Postman
 
